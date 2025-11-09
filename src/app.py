@@ -80,7 +80,7 @@ activities = {
 
 @app.get("/")
 def root():
-    return RedirectResponse(url="/static/index.html")
+    return RedirectResponse(url="/static/index.html", status_code=307)
 
 
 @app.get("/activities")
@@ -97,9 +97,20 @@ def signup_for_activity(activity_name: str, email: str):
 
     # Get the specific activity
     activity = activities[activity_name]
-# Validate student is not already signed up
+    
+    # Check if activity is at capacity
+    if len(activity["participants"]) >= activity["max_participants"]:
+        raise HTTPException(status_code=400, detail="Activity is full")
+        
+    # Validate student is not already signed up
     if email in activity["participants"]:
         raise HTTPException(status_code=400, detail="Student already signed up for this activity")
+        
+    # Validate email format
+    import re
+    email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+    if not email_pattern.match(email):
+        raise HTTPException(status_code=422, detail="Invalid email format")
     # Add student
     activity["participants"].append(email)
     return {"message": f"Signed up {email} for {activity_name}"}
